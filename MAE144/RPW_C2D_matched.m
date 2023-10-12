@@ -9,6 +9,12 @@ function [Dz_c, Dz_sc] = RPW_C2D_matched(bs,as,omegac,h)
 % for the matched z-transform method
 map_zp_fun = @(s,h) exp(s*h);
 
+% if only 3 input arguments, assume the third input is step-size
+if nargin == 3
+    h = omegac;
+    omegac = 0;
+end
+
 % this performs the mapping if there are zeros
 if ~isempty(bs)
     bz = map_zp_fun(bs,h);
