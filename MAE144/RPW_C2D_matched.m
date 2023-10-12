@@ -1,19 +1,13 @@
-function [Dz_c, Dz_sc] = RPW_C2D_matched(bs,as,omegac,h)
+function [Dz] = RPW_C2D_matched(bs,as,omegac,h,causality)
 
 % inputs: 'bs' is list of zeros, 'as' is list of poles, 'omegac' (optional)
-%    is critical omega, 'h' is step size
-% outputs: 'Dz_c' is the causal z-transform, 'Dz_sc' is the semi-causal
-%   z-transform
+%    is critical omega, 'h' is step size, 'causality' is 1 for causal and 0
+%    for semi-causal
+% outputs: 'Dz' is the z-transform, with desired causality
 
 % this is the mapping of zeros and poles from the s plane to the z plane
 % for the matched z-transform method
 map_zp_fun = @(s,h) exp(s*h);
-
-% if only 3 input arguments, assume the third input is step-size
-if nargin == 3
-    h = omegac;
-    omegac = 0;
-end
 
 % this performs the mapping if there are zeros
 if ~isempty(bs)
@@ -36,40 +30,31 @@ DCgain_star = prod(-bs+(1i*omegac))/prod(-as+(1i*omegac));
 % matched z-transform method
 number_of_inf_zeros = length(as) - length(bs);
 
-% this creates the new zeros for semi-causal and causal systems
-new_zeros_sc = -ones(1, number_of_inf_zeros);
-new_zeros_c = -ones(1, number_of_inf_zeros-1);
+% this creates the new zeros for desired semi-causal or causal system
+new_zeros = -ones(1, number_of_inf_zeros-causality);
 
 % this adds the new zeros to the previously mapped zeros
-bz_sc = cat(2, bz, new_zeros_sc);
-bz_c = cat(2, bz, new_zeros_c);
+bz_new = cat(2, bz, new_zeros);
 
 % this formula calculates the gain of the matched z-transform for the
-% critical omega of interest for both semi-causal and causal systems
-k_sc = DCgain_star*(prod(-az + exp(1i*omegac*h))/prod(-bz_sc + exp(1i*omegac*h)));
-k_c = DCgain_star*(prod(-az + exp(1i*omegac*h))/prod(-bz_c + exp(1i*omegac*h)));
+% critical omega of interest
+k = DCgain_star*(prod(-az + exp(1i*omegac*h))/prod(-bz_new + exp(1i*omegac*h)));
 
 % this makes z symbolic for future use
 %sympref('FloatingPointOutput',true);
 syms z;
 % z = tf('z');
 
-% this creates the numerator of the causal system by multiplying all of the
+% this creates the numerator of the z-transform by multiplying all of the
 % (z-zeros) above
-Dz_c_num = k_c*RR_Prod(z-bz_c);
+Dz_num = k*RR_Prod(z-bz_new);
 
-% this creates the denominator of both systems by mutliplying all of the
+% this creates the denominator of the z-transform by mutliplying all of the
 % (z-poles) above
 Dz_den = RR_Prod(z-az);
 
-% this creates the causal D(z) z-transform
-Dz_c = Dz_c_num/Dz_den
+% this creates the D(z) z-transform
+Dz = Dz_num/Dz_den
 
-% this creates the numerator of the semi-causal system by multiplying all
-% of the (z-zeros) 
-Dz_sc_num = k_sc*RR_Prod(z-bz_sc);
-
-% this creates the semi-causal D(z) z-transform
-Dz_sc = Dz_sc_num/Dz_den
 
 end
